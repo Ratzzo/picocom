@@ -1676,7 +1676,7 @@ main(int argc, char *argv[])
     else
         fd_printf(STO, "Thanks for using picocom\r\n");
     /* wait a bit for output to drain */
-    sleep(1);
+//    sleep(1);
 
 #ifdef UUCP_LOCK_DIR
     uucp_unlock();
