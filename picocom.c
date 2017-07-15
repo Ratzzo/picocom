@@ -181,6 +181,7 @@ struct {
     int lecho;
     int noinit;
     int noreset;
+    int quiet;
 #if defined (UUCP_LOCK_DIR) || defined (USE_FLOCK)
     int nolock;
 #endif
@@ -203,6 +204,7 @@ struct {
     .lecho = 0,
     .noinit = 0,
     .noreset = 0,
+    .quiet = 0,
 #if defined (UUCP_LOCK_DIR) || defined (USE_FLOCK)
     .nolock = 0,
 #endif
@@ -758,6 +760,7 @@ show_status (int dtr_up, int rts_up)
 void
 show_keys()
 {
+    if(opts.quiet) return;
 #ifndef NO_HELP
     fd_printf(STO, "\r\n");
     fd_printf(STO, "*** Picocom commands (all prefixed by [C-%c])\r\n",
@@ -1265,6 +1268,7 @@ establish_signal_handlers (void)
 void
 show_usage(char *name)
 {
+    if(opts.quiet) return;
 #ifndef NO_HELP
     char *s;
 
@@ -1347,6 +1351,7 @@ parse_args(int argc, char *argv[])
         {"echo", no_argument, 0, 'c'},
         {"noinit", no_argument, 0, 'i'},
         {"noreset", no_argument, 0, 'r'},
+        {"quiet", no_argument, 0, 'q'},
         {"nolock", no_argument, 0, 'l'},
         {"flow", required_argument, 0, 'f'},
         {"baud", required_argument, 0, 'b'},
@@ -1407,6 +1412,9 @@ parse_args(int argc, char *argv[])
             break;
         case 'r':
             opts.noreset = 1;
+            break;
+        case 'q':
+            opts.quiet = 1;
             break;
         case 'l':
 #if defined (UUCP_LOCK_DIR) || defined (USE_FLOCK)
@@ -1537,32 +1545,35 @@ parse_args(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-#ifndef NO_HELP
-    printf("picocom v%s\n", VERSION_STR);
-    printf("\n");
-    printf("port is        : %s\n", opts.port);
-    printf("flowcontrol    : %s\n", flow_str[opts.flow]);
-    printf("baudrate is    : %d\n", opts.baud);
-    printf("parity is      : %s\n", parity_str[opts.parity]);
-    printf("databits are   : %d\n", opts.databits);
-    printf("stopbits are   : %d\n", opts.stopbits);
-    printf("escape is      : C-%c\n", KEYC(opts.escape));
-    printf("local echo is  : %s\n", opts.lecho ? "yes" : "no");
-    printf("noinit is      : %s\n", opts.noinit ? "yes" : "no");
-    printf("noreset is     : %s\n", opts.noreset ? "yes" : "no");
-#if defined (UUCP_LOCK_DIR) || defined (USE_FLOCK)
-    printf("nolock is      : %s\n", opts.nolock ? "yes" : "no");
-#endif
-    printf("send_cmd is    : %s\n",
-           (opts.send_cmd[0] == '\0') ? "disabled" : opts.send_cmd);
-    printf("receive_cmd is : %s\n",
-           (opts.receive_cmd[0] == '\0') ? "disabled" : opts.receive_cmd);
-    printf("imap is        : "); print_map(opts.imap);
-    printf("omap is        : "); print_map(opts.omap);
-    printf("emap is        : "); print_map(opts.emap);
-    printf("logfile is     : %s\n", opts.log_filename ? opts.log_filename : "none");
-    printf("\n");
-#endif /* of NO_HELP */
+    #ifndef NO_HELP
+    if(!opts.quiet){
+        printf("picocom v%s\n", VERSION_STR);
+        printf("\n");
+        printf("port is        : %s\n", opts.port);
+        printf("flowcontrol    : %s\n", flow_str[opts.flow]);
+        printf("baudrate is    : %d\n", opts.baud);
+        printf("parity is      : %s\n", parity_str[opts.parity]);
+        printf("databits are   : %d\n", opts.databits);
+        printf("stopbits are   : %d\n", opts.stopbits);
+        printf("escape is      : C-%c\n", KEYC(opts.escape));
+        printf("local echo is  : %s\n", opts.lecho ? "yes" : "no");
+        printf("noinit is      : %s\n", opts.noinit ? "yes" : "no");
+        printf("noreset is     : %s\n", opts.noreset ? "yes" : "no");
+        printf("quiet is       : %s\n", opts.quiet ? "yes" : "no");
+    #if defined (UUCP_LOCK_DIR) || defined (USE_FLOCK)
+        printf("nolock is      : %s\n", opts.nolock ? "yes" : "no");
+    #endif
+        printf("send_cmd is    : %s\n",
+               (opts.send_cmd[0] == '\0') ? "disabled" : opts.send_cmd);
+        printf("receive_cmd is : %s\n",
+               (opts.receive_cmd[0] == '\0') ? "disabled" : opts.receive_cmd);
+        printf("imap is        : "); print_map(opts.imap);
+        printf("omap is        : "); print_map(opts.omap);
+        printf("emap is        : "); print_map(opts.emap);
+        printf("logfile is     : %s\n", opts.log_filename ? opts.log_filename : "none");
+        printf("\n");
+    }
+    #endif /* of NO_HELP */
 }
 
 /**********************************************************************/
@@ -1654,11 +1665,13 @@ main(int argc, char *argv[])
     init_history();
 #endif
 
-#ifndef NO_HELP
-    fd_printf(STO, "Type [C-%c] [C-%c] to see available commands\r\n\r\n",
-              KEYC(opts.escape), KEYC(KEY_HELP));
-#endif
-    fd_printf(STO, "Terminal ready\r\n");
+    if(!opts.quiet){
+    #ifndef NO_HELP
+        fd_printf(STO, "Type [C-%c] [C-%c] to see available commands\r\n\r\n",
+                  KEYC(opts.escape), KEYC(KEY_HELP));
+    #endif
+        fd_printf(STO, "Terminal ready\r\n");
+    }
     loop();
 
 #ifdef LINENOISE
@@ -1674,7 +1687,8 @@ main(int argc, char *argv[])
     if ( sig_exit )
         fd_printf(STO, "Picocom was killed\r\n");
     else
-        fd_printf(STO, "Thanks for using picocom\r\n");
+        if(!opts.quiet)
+            fd_printf(STO, "Thanks for using picocom\r\n");
     /* wait a bit for output to drain */
 //    sleep(1);
 
